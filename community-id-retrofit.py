@@ -10,7 +10,7 @@ import re
 import argparse
 
 replace_regex = re.compile('(.*"uid":"[A-Za-z0-9]+",)(.*)')
-conn_log_regex = re.compile('conn\.([0-9:-]+\.)?log(\.gz)?')
+conn_log_regex = re.compile('conn\.([0-9:-]+)?\.(log(?:\.gz)?)')
 
 def insert_community_id(original_line, community_id):
     # you might be asking why this is being done with a regex replacement rather than modifying and dumping 
@@ -149,7 +149,7 @@ def retrofit_community_id(uid_map, filename, overwrite=False, new_filename=''):
          if args.verbose:
             print(f'  - Retrofitting {root}/{retrofit_filename} -> {tmp_name}')
     
-    elif not community_id_inserted:
+    elif not community_id_inserted and not args.testrun:
         os.remove(new_filename)
 
 parser = argparse.ArgumentParser(description="Traverse a directory tree containing Zeek log files in JSON format, adding a community_id field to each wherever a uid field already exists.")
@@ -180,13 +180,12 @@ for root, dirs, files in os.walk(args.inputdir):
                 print(f'- Found or calculated {len(uid_map)} community_id values')
 
             time_range = conn_match.group(1)
-            if time_range == None:
-                time_range = ''
             extension = conn_match.group(2)
-            if extension == None:
-                extension = ''
 
-            file_regex = re.compile(f'.*\.({time_range}\.)?log{extension}')
+            if time_range == None:
+                file_regex = re.compile(f'.*\.{extension}')
+            else:
+                file_regex = re.compile(f'.*\.{time_range}\.{extension}')
 
             for retrofit_filename in os.listdir(root):
                 if file_regex.match(retrofit_filename):
