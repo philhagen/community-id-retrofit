@@ -7,7 +7,7 @@ import communityid
 import tempfile
 import shutil
 import re
-# TODO: argparse needed
+import argparse
 
 replace_regex = re.compile('(.*"uid":"[A-Za-z0-9]+",)(.*)')
 conn_log_regex = re.compile('conn\.([0-9:-]+\.)?log(\.gz)?')
@@ -43,17 +43,16 @@ def build_uid_map(conn_filename, overwrite=False):
     uid_map = {}
     cid = communityid.CommunityID()
 
-    community_id_added = False
-
     (conn_fh, conn_is_gzip_file) = open_conditional_gzip(conn_filename)
 
     first_line = conn_fh.readline()
     first_line_json = json.loads(first_line)
 
     if 'uid' not in first_line_json:
+        if not args.verbose:
             print(f'no uid value here: {conn_filename}')
-            ## TODO: should just skip this file instead of exit()
-            exit(2)
+            return False
+
     else:
         conn_fh.seek(0)
         for line in conn_fh:
@@ -88,25 +87,33 @@ def build_uid_map(conn_filename, overwrite=False):
 def create_new_logfile(filename, is_gzip_file):
     if is_gzip_file:
         new_logfile_fh = gzip.open(filename, 'wb')
+
     else:
         new_logfile_fh = open(filename, 'wb')
 
     return new_logfile_fh
 
-def retrofit_community_id(uid_map, log_filename, overwrite=False, new_filename=''):
-    (logfile_fh, log_is_gzip_file) = open_conditional_gzip(log_filename)
+def retrofit_community_id(uid_map, filename, overwrite=False, new_filename=''):
+    (logfile_fh, log_is_gzip_file) = open_conditional_gzip(filename)
 
     first_line = logfile_fh.readline()
     first_line_json = json.loads(first_line)
 
     community_id_inserted = False
 
-    if 'uid' not in first_line_json or 'community_id' in first_line_json:
+    if 'uid' not in first_line_json:
+        if args.verbose:
+            print(f'  - No uid in {root}/{retrofit_filename}, skipping')
+        return
+    elif 'community_id' in first_line_json:
+        if args.verbose:
+            print(f'  - community_id field already exists in {root}/{retrofit_filename}, skipping')
         return
 
     else:
         logfile_fh.seek(0)
-        new_logfile_fh = create_new_logfile(new_filename, log_is_gzip_file)
+        if not args.testrun:
+            new_logfile_fh = create_new_logfile(new_filename, log_is_gzip_file)
 
     for logfile_line in logfile_fh:
         json_logfile_entry = json.loads(logfile_line)
@@ -124,29 +131,53 @@ def retrofit_community_id(uid_map, log_filename, overwrite=False, new_filename='
             # no community_id for this uid, so just write out the unmodified source line
             new_json_logfile_line = logfile_line
 
-        new_logfile_fh.write(new_json_logfile_line.encode('utf-8'))
+        if not args.testrun:
+            new_logfile_fh.write(new_json_logfile_line.encode('utf-8'))
 
     logfile_fh.close()
-    new_logfile_fh.close()
+    if not args.testrun:
+        new_logfile_fh.close()
 
     if overwrite and community_id_inserted:
-        shutil.move(new_filename, log_filename)
+        if args.verbose:
+            print(f'  - Retrofitted {root}/{retrofit_filename} (overwrite)')
 
-## Temp usage variables!!! these need to be replaced via argparse
-## todo: should we also have a "backup original" option?
-overwrite_source = False
-##
+        if not args.testrun:
+            shutil.move(new_filename, filename)
+
+    elif community_id_inserted:
+         if args.verbose:
+            print(f'  - Retrofitting {root}/{retrofit_filename} -> {tmp_name}')
+    
+    elif not community_id_inserted:
+        os.remove(new_filename)
+
+parser = argparse.ArgumentParser(description="Traverse a directory tree containing Zeek log files in JSON format, adding a community_id field to each wherever a uid field already exists.")
+parser.add_argument("-r", "--read", dest="inputdir", help="Root directory to traverse.  Default is the current directory.", default=".")
+parser.add_argument("-o", "--overwrite", dest="overwrite_source", action="store_true", default=False, help="Overwrite source files.  If omitted, new files will be created alongside the originals, which will be left unchanged.")
+parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", default=False, help="Verbose output.")
+parser.add_argument("-t", "--testrun", dest="testrun", action="store_true", default=False, help="Just run a trial and don't make any changes.")
+args = parser.parse_args()
 
 ## traversal algorithm, take 2
-for root, dirs, files in os.walk('.'):
+for root, dirs, files in os.walk(args.inputdir):
     for filename in files:
         conn_match = conn_log_regex.match(filename)
 
         if conn_match:
             conn_filename = os.path.join(root, filename)
+
             print(f'using {conn_filename} for uid_map')
-            pdb.set_trace()
+
             uid_map = build_uid_map(conn_filename)
+
+            if uid_map == False:
+                if args.verbose:
+                    print('- No uid->community_id map could be created.  Skipping.')
+                continue
+
+            if args.verbose:
+                print(f'- Found or calculated {len(uid_map)} community_id values')
 
             time_range = conn_match.group(1)
             if time_range == None:
@@ -157,16 +188,14 @@ for root, dirs, files in os.walk('.'):
 
             file_regex = re.compile(f'.*\.({time_range}\.)?log{extension}')
 
-            for name2 in os.listdir(root):
-                if file_regex.match(name2):
+            for retrofit_filename in os.listdir(root):
+                if file_regex.match(retrofit_filename):
 
-                    log_filename = os.path.join(root, name2)
+                    retrofit_filepath = os.path.join(root, retrofit_filename)
 
-                    if overwrite_source:
+                    if args.overwrite_source:
                         tmp_name = tempfile.mktemp()
-                        print(f'- enriching {root}/{name2} (overwrite)')
                     else:
-                        tmp_name = log_filename.replace('.log', '.new.log')
-                        print(f'- enriching {root}/{name2} -> {tmp_name}')
+                        tmp_name = retrofit_filepath.replace('.log', '.new.log')
 
-                    retrofit_community_id(uid_map, log_filename, overwrite_source, tmp_name)
+                    retrofit_community_id(uid_map, retrofit_filepath, args.overwrite_source, tmp_name)
