@@ -29,8 +29,14 @@ The script has just a few command line parameters.  All of these are optional.
 THe below example shows the original and modified lines from a `files.log` entry.  (The lines have been truncated for space.)
 
 ```bash
-% head -n 1 files.log 
-{"ts":1674054511.216466,"fuid":"FeKGpf3GkLluk8n3Ic","uid":"CE20kl0Vp7bggrVdk","id.orig_h":"172.16.6.11", ...}
+% head -n 1 files.log | jq
+{
+  "ts":1674054511.216466,
+  "fuid":"FeKGpf3GkLluk8n3Ic",
+  "uid":"CE20kl0Vp7bggrVdk",
+  "id.orig_h":"172.16.6.11",
+  ...
+}
 
 % ../../../community-id-retrofit.py -r . -o -v
 using ./conn.log for uid_map
@@ -52,8 +58,15 @@ using ./conn.log for uid_map
   - No uid in ./known_hosts.log, skipping
   - Retrofitted ./dce_rpc.log (overwrite)
 
-% head -n 1 files.log
-{"ts":1674054511.216466,"fuid":"FeKGpf3GkLluk8n3Ic","uid":"CE20kl0Vp7bggrVdk","community_id":"1:gks9G58UPyWtmm/Z1FKDEn5hKSg=","id.orig_h":"172.16.6.11", ...}
+% head -n 1 files.log | jq
+{
+  "ts":1674054511.216466,
+  "fuid":"FeKGpf3GkLluk8n3Ic",
+  "uid":"CE20kl0Vp7bggrVdk",
+  "community_id":"1:gks9G58UPyWtmm/Z1FKDEn5hKSg=",
+  "id.orig_h":"172.16.6.11",
+  ...
+}
 ```
 
 Note the addition of the `community_id` field in the resulting `files.log` file, files that did not contain a `uid` field, and that the `conn.log` file already contained the `community_id` field.
