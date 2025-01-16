@@ -46,7 +46,7 @@ using ./conn.log for uid_map
   - No uid in ./notice.log, skipping
   - No uid in ./pe.log, skipping
   - community_id field already exists in ./conn.log, skipping
-  - Retrofitted .//smb_files.log (overwrite)
+  - Retrofitted ./smb_files.log (overwrite)
   - No uid in ./stats.log, skipping
   - No uid in ./known_services.log, skipping
   - No uid in ./capture_loss.log, skipping
