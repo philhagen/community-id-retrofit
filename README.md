@@ -26,7 +26,7 @@ The script has just a few command line parameters.  All of these are optional.
 
 ### Example
 
-THe below example shows the original and modified lines from a `files.log` entry.  (The lines have been truncated for space.)
+The below example shows the original and modified lines from a `files.log` entry.  (The lines have been truncated for space.)
 
 ```bash
 % head -n 1 files.log | jq
