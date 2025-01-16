@@ -12,7 +12,7 @@ The Community ID sought in part to alleviate this shortfall.  This feature was a
 
 ## Goal for this Script
 
-The script in this repository will retrofit a `community_id` value into all Zeek logs that contain a `uid` value.  If a connection log file already has a `community_id` value calculated, this value will be used.  If this field is not available, the `community_id` value will be calculated from teh values in the connection log.  It is then inserted into all log files that contain a `uid` value.  The script recursively traverses a directory tree of Zeek files in plain text or gzip-compressed format.  At this time, only JSON-formatted Zeek log files are supported.
+The script in this repository will retrofit a `community_id` value into all Zeek logs that contain a `uid` value.  If a connection log file already has a `community_id` value calculated, this value will be used.  If this field is not available, the `community_id` value will be calculated from the values in the connection log.  It is then inserted into all log files that contain a `uid` value.  The script recursively traverses a directory tree of Zeek files in plain text or gzip-compressed format.  At this time, only JSON-formatted Zeek log files are supported.
 
 ## Usage
 
