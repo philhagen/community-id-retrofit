@@ -1,4 +1,10 @@
 #!env python3
+# community-id-retrofit.py version 1.0
+# (C) 2025 Lewes Technology Consulting, LLC
+#
+# This script will extract or calculate the community_id value from Zeek's
+# conn.log files, then append it to existing Zeek log records in other
+# Zeek log files.
 
 import gzip
 import os
@@ -10,7 +16,7 @@ import re
 import argparse
 
 replace_regex = re.compile('(.*"uid":"[A-Za-z0-9]+",)(.*)')
-conn_log_regex = re.compile("conn\.([0-9:-]+)?\.(log(?:\.gz)?)")
+conn_log_regex = re.compile("conn\.([0-9:-]+)?\.?(log(?:\.gz)?)")
 
 
 def insert_community_id(original_line, community_id):
@@ -171,7 +177,7 @@ parser.add_argument(
     "-r",
     "--read",
     dest="inputdir",
-    help="Root directory to traverse.  Default is the current directory.",
+    help="Root directory to traverse.  Default: ./",
     default=".",
 )
 parser.add_argument(
@@ -180,15 +186,7 @@ parser.add_argument(
     dest="overwrite_source",
     action="store_true",
     default=False,
-    help="Overwrite source files.  If omitted, new files will be created alongside the originals, which will be left unchanged.",
-)
-parser.add_argument(
-    "-v",
-    "--verbose",
-    dest="verbose",
-    action="store_true",
-    default=False,
-    help="Verbose output.",
+    help="Overwrite source files.  Default: Create new log files alongside the originals, which will be left unchanged.",
 )
 parser.add_argument(
     "-t",
@@ -196,7 +194,15 @@ parser.add_argument(
     dest="testrun",
     action="store_true",
     default=False,
-    help="Just run a trial and don't make any changes.",
+    help="Just run a trial and don't make any changes. Default: false",
+)
+parser.add_argument(
+    "-v",
+    "--verbose",
+    dest="verbose",
+    action="store_true",
+    default=False,
+    help="Verbose output.  Default: false",
 )
 args = parser.parse_args()
 
